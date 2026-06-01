@@ -2,11 +2,60 @@
 // SPDX-License-Identifier: MIT
 use std::env;
 use std::io::Result;
+use std::path::Path;
 use std::path::PathBuf;
+use std::process::Command;
+
+/// Resolve the `protoc` binary the same way prost-build does: the `PROTOC`
+/// environment variable if set, otherwise `protoc` from `PATH`.
+fn protoc_path() -> PathBuf {
+    env::var_os("PROTOC").map_or_else(|| PathBuf::from("protoc"), PathBuf::from)
+}
+
+/// Returns true if `protoc` can actually be executed. When it can't, the build
+/// falls back to the pregenerated sources checked in under `src/grpc`.
+fn protoc_available() -> bool {
+    Command::new(protoc_path())
+        .arg("--version")
+        .output()
+        .is_ok_and(|output| output.status.success())
+}
+
+/// Emit `cargo:rerun-if-changed` for every `.proto` under `dir` so the bindings
+/// are regenerated only when an input actually changes.
+fn rerun_if_proto_changed(dir: &Path) -> Result<()> {
+    for entry in std::fs::read_dir(dir)? {
+        let path = entry?.path();
+        if path.is_dir() {
+            rerun_if_proto_changed(&path)?;
+        } else if path.extension().and_then(|ext| ext.to_str()) == Some("proto") {
+            println!("cargo:rerun-if-changed={}", path.display());
+        }
+    }
+    Ok(())
+}
 
 fn main() -> Result<()> {
     let crate_dir = env::var("CARGO_MANIFEST_DIR").expect("No manifest dir set");
-    let output_dir = PathBuf::from(crate_dir).join("src").join("grpc");
+    let proto_dir = PathBuf::from(&crate_dir).join("proto");
+    let output_dir = PathBuf::from(&crate_dir).join("src").join("grpc");
+
+    // Declare the codegen inputs unconditionally so Cargo re-runs this script
+    // when PROTOC changes or a watched .proto is edited — even on a build where
+    // protoc is missing. Emitting these before the availability check is what
+    // lets a fixed PROTOC (or a newly installed protoc plus a .proto edit)
+    // recover and regenerate; if they were only emitted after the early return,
+    // the protoc-missing run would record no watches and fixing PROTOC alone
+    // would never re-run this script.
+    println!("cargo:rerun-if-env-changed=PROTOC");
+    rerun_if_proto_changed(&proto_dir)?;
+
+    // protoc is only needed to regenerate the gRPC bindings. When it isn't
+    // installed, rely on the pregenerated sources committed under src/grpc so
+    // the crate still builds.
+    if !protoc_available() {
+        return Ok(());
+    }
 
     let mut config = tonic_prost_build::Config::new();
     config.enable_type_names();
