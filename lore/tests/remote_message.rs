@@ -44,6 +44,7 @@ async fn message_to_server_to_and_from_bytes() {
         command: LoreCommand::RepositoryStatus(LoreRepositoryStatusArgs {
             staged: 0,
             scan: 0,
+            check_dirty: 0,
             reset: 0,
             sync_point: 0,
             revision_only: 0,

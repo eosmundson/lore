@@ -96,6 +96,7 @@ mod tests {
         let args = LoreRepositoryStatusArgs {
             staged: 1,
             scan: 1,
+            check_dirty: 0,
             reset: 0,
             sync_point: 0,
             revision_only: 0,

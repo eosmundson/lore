@@ -4,12 +4,24 @@ import logging
 import os
 
 import pytest
-from test_utils import posix_join
+from test_utils import posix_join, to_posix
 
 from lore import Lore
-from lore_parsers import parse_status_count_json
+from lore_parsers import parse_status_count_json, parse_status_json
 
 logger = logging.getLogger(__name__)
+
+
+def _status_files_by_path(repo: Lore, **kwargs) -> dict[str, dict]:
+    """Run `status --json` and return the file events keyed by posix path.
+
+    Only `type == "file"` entries are kept so directory bookkeeping does not
+    interfere with file-level assertions.
+    """
+    entries = parse_status_json(repo.status(json=True, offline=True, **kwargs))
+    return {
+        to_posix(e.get("path", "")): e for e in entries if e.get("type") == "file"
+    }
 
 
 @pytest.mark.smoke
@@ -643,3 +655,157 @@ def test_status_count_link_and_layers(new_lore_repo):
     assert parse_status_count_json(
         repo.status(["lk", "la", "lb"], count=True, json=True)
     ) == {"directories": 4, "files": 6}
+
+
+@pytest.mark.smoke
+def test_status_check_dirty(new_lore_repo):
+    """`status --check-dirty` clears dirty flags that no longer reflect a real
+    on-disk change while keeping genuinely modified files, across a directory
+    hierarchy, and persists the cleared flags.
+
+    A committed tree is fully flagged dirty with `lore dirty` (which marks
+    unconditionally), then only two files are actually modified. --check-dirty
+    must keep exactly those two, clear every other flag — including a whole
+    subtree whose files all revert clean and a root-level file — and the
+    cleared state must survive into a later plain status.
+    """
+    repo: Lore = new_lore_repo()
+
+    repo.make_dirs(posix_join("top", "sub"))
+    repo.make_dirs("clean")
+    files = [
+        posix_join("top", "a.txt"),
+        posix_join("top", "b.txt"),
+        posix_join("top", "sub", "c.txt"),
+        posix_join("top", "sub", "d.txt"),
+        posix_join("clean", "e.txt"),
+        posix_join("clean", "f.txt"),
+        "root.txt",
+    ]
+    for name in files:
+        with repo.open_file(name, "w+b") as f:
+            f.write(os.urandom(64))
+    repo.stage(scan=True)
+    repo.commit()
+
+    # Genuinely modify two files; a different size makes them unambiguously
+    # modified regardless of timestamp resolution.
+    modified = {posix_join("top", "a.txt"), posix_join("top", "sub", "c.txt")}
+    for name in modified:
+        with repo.open_file(name, "w+b") as f:
+            f.write(os.urandom(128))
+
+    # Flag every file dirty, including the five that were never touched.
+    repo.dirty(files)
+
+    pre = _status_files_by_path(repo)
+    assert set(pre) == {to_posix(p) for p in files}, (
+        f"expected all files flagged dirty before verification, got {sorted(pre)}"
+    )
+    assert all(pre[to_posix(p)]["flagDirty"] is True for p in files), (
+        f"all pre-check entries should be dirty: {pre}"
+    )
+
+    checked = _status_files_by_path(repo, check_dirty=True)
+    assert set(checked) == {to_posix(p) for p in modified}, (
+        f"--check-dirty should keep only the modified files, got {sorted(checked)}"
+    )
+    for p in modified:
+        entry = checked[to_posix(p)]
+        assert entry["flagDirty"] is True, f"{p} should stay dirty: {entry}"
+        assert entry["action"] == "keep", f"{p} should be a modify: {entry}"
+
+    after = _status_files_by_path(repo)
+    assert set(after) == {to_posix(p) for p in modified}, (
+        f"cleared dirty flags should persist, plain status got {sorted(after)}"
+    )
+
+
+@pytest.mark.smoke
+def test_status_check_dirty_add_delete(new_lore_repo):
+    """`status --check-dirty` always keeps structural changes (adds and
+    deletes) — there is no content to re-verify — while still clearing a stale
+    dirty-modify in the same run, and persists the result.
+    """
+    repo: Lore = new_lore_repo()
+
+    repo.make_dirs("dir")
+    for name in ("keep.txt", "del.txt", posix_join("dir", "inner.txt")):
+        with repo.open_file(name, "w+b") as f:
+            f.write(os.urandom(64))
+    repo.stage(scan=True)
+    repo.commit()
+
+    # A brand-new file (add), a removed committed file (delete), and an
+    # untouched committed file flagged dirty (a stale modify).
+    with repo.open_file("added.txt", "w+b") as f:
+        f.write(os.urandom(64))
+    repo.remove_file("del.txt")
+    repo.dirty(["added.txt", "del.txt", "keep.txt"])
+
+    checked = _status_files_by_path(repo, check_dirty=True)
+
+    assert "added.txt" in checked, f"a dirty add must be reported: {sorted(checked)}"
+    assert checked["added.txt"]["action"] == "add"
+    assert checked["added.txt"]["flagDirty"] is True
+
+    assert "del.txt" in checked, f"a dirty delete must be reported: {sorted(checked)}"
+    assert checked["del.txt"]["action"] == "delete"
+    assert checked["del.txt"]["flagDirty"] is True
+
+    assert "keep.txt" not in checked, (
+        f"the stale dirty-modify must be cleared: {sorted(checked)}"
+    )
+
+    after = _status_files_by_path(repo)
+    assert set(after) == {"added.txt", "del.txt"}, (
+        f"add/delete must remain and the stale modify stay cleared, got {sorted(after)}"
+    )
+
+
+@pytest.mark.smoke
+def test_status_check_dirty_rehashes_same_size(new_lore_repo):
+    """`status --check-dirty` rehashes a dirty file when its size still matches
+    the tracked node but its modification time has changed, so same-size edits
+    are told apart from reverts by content rather than size alone.
+
+    Two committed files of identical size are each overwritten in place with
+    new content of the same size and flagged dirty. One keeps the new content;
+    the other has its original bytes written back. --check-dirty must keep the
+    genuinely changed file dirty and clear the reverted one — only a content
+    hash comparison can distinguish them — and the cleared flag must persist.
+    """
+    repo: Lore = new_lore_repo()
+
+    reverted_original = os.urandom(256)
+    with repo.open_file("modified.bin", "w+b") as f:
+        f.write(os.urandom(256))
+    with repo.open_file("reverted.bin", "w+b") as f:
+        f.write(reverted_original)
+    repo.stage(scan=True)
+    repo.commit()
+
+    # Overwrite both in place with new, same-size content so the size check
+    # cannot decide — the verification must fall through to the hash check.
+    with repo.open_file("modified.bin", "w+b") as f:
+        f.write(os.urandom(256))
+    with repo.open_file("reverted.bin", "w+b") as f:
+        f.write(os.urandom(256))
+    repo.dirty(["modified.bin", "reverted.bin"])
+
+    # Restore exactly the committed bytes for one file; its content now matches
+    # the tracked node again even though its modification time has moved.
+    with repo.open_file("reverted.bin", "w+b") as f:
+        f.write(reverted_original)
+
+    checked = _status_files_by_path(repo, check_dirty=True)
+    assert set(checked) == {"modified.bin"}, (
+        f"only the genuinely changed same-size file should stay dirty, got {sorted(checked)}"
+    )
+    assert checked["modified.bin"]["flagDirty"] is True
+    assert checked["modified.bin"]["action"] == "keep"
+
+    after = _status_files_by_path(repo)
+    assert set(after) == {"modified.bin"}, (
+        f"reverted file must remain cleared on a later status, got {sorted(after)}"
+    )

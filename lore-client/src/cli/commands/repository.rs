@@ -71,6 +71,18 @@ pub struct RepositoryStatusArgs {
     #[clap(long, action, hide = true)]
     unstaged: bool,
 
+    /// Verify already-dirty files against the filesystem without a full
+    /// scan.
+    ///
+    /// Each file currently marked dirty is re-checked: one whose on-disk
+    /// content still matches the tracked revision (same size, and same
+    /// content when the modification time differs) has its dirty flag
+    /// cleared and is dropped from the report, unless it is also staged.
+    /// Adds, moves, copies, and deletes are always reported. The refreshed
+    /// flags are persisted, so this requires write access.
+    #[clap(long, action)]
+    check_dirty: bool,
+
     /// Drop the existing staged anchor before computing status.
     /// Combine with --scan to scan from a clean slate.
     #[clap(long, action)]
@@ -464,6 +476,11 @@ pub fn handle_repository_status(globals: LoreGlobalArgs, args: &RepositoryStatus
     } else {
         0u8
     };
+    let check_dirty = if revision_only {
+        0u8
+    } else {
+        args.check_dirty as u8
+    };
     let reset = if revision_only { 0u8 } else { args.reset as u8 };
     let sync_point = false as u8;
 
@@ -472,6 +489,7 @@ pub fn handle_repository_status(globals: LoreGlobalArgs, args: &RepositoryStatus
     let args = LoreRepositoryStatusArgs {
         staged,
         scan,
+        check_dirty,
         reset,
         sync_point,
         revision_only: revision_only as u8,

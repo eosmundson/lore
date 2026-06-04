@@ -2195,6 +2195,65 @@ impl State {
         Ok(has_dirty)
     }
 
+    /// Clear the dirty flags on `node_id` and propagate the clear up the parent
+    /// chain: each ancestor with no remaining dirty children also has its dirty
+    /// flags cleared. Staged flags are preserved (see [`Node::clear_dirty_flags`]).
+    ///
+    /// This is the inverse of [`node_mark_dirty`](Self::node_mark_dirty) and is
+    /// used both by the filesystem scan when a tracked file is found unmodified
+    /// and by `status --check-dirty` when a dirty flag turns out to be stale.
+    pub async fn node_clear_dirty(
+        &self,
+        repository: Arc<RepositoryContext>,
+        node_id: NodeID,
+    ) -> Result<(), StateError> {
+        if !node_id.is_valid_node_id() {
+            return Ok(());
+        }
+
+        let block_index = NodeBlock::index(node_id);
+        let node_index = Node::index(node_id);
+        let block = self.block(repository.clone(), block_index).await?;
+        let mut parent_id = block.node(node_index).parent;
+        let block_dirtied = {
+            let mut locked_block = block.write();
+            locked_block.node(node_index).clear_dirty_flags();
+            locked_block.mark_dirty()
+        };
+        if block_dirtied {
+            self.block_modified(block, block_index);
+            self.mark_dirty();
+        }
+
+        while parent_id.is_valid_node_id() {
+            if self
+                .node_has_dirty_children(repository.clone(), parent_id)
+                .await?
+            {
+                break;
+            }
+            let parent_block_index = NodeBlock::index(parent_id);
+            let parent_node_index = Node::index(parent_id);
+            let parent_block = self.block(repository.clone(), parent_block_index).await?;
+            let next_parent_id = parent_block.node(parent_node_index).parent;
+            let parent_block_dirtied = {
+                let mut locked_block = parent_block.write();
+                locked_block.node(parent_node_index).clear_dirty_flags();
+                locked_block.mark_dirty()
+            };
+            if parent_block_dirtied {
+                self.block_modified(parent_block, parent_block_index);
+                self.mark_dirty();
+            }
+            if parent_id == ROOT_NODE {
+                break;
+            }
+            parent_id = next_parent_id;
+        }
+
+        Ok(())
+    }
+
     /// Collect paths of all dirty file nodes under a subtree.
     ///
     /// Walks the state tree from `root_node`, recursing into dirty directories,
@@ -5002,54 +5061,9 @@ async fn handle_single_file_compare_result(
                     && ctx.from_node_id.is_valid_node_id()
                     && ctx.from_node.is_some_and(|n| n.is_dirty())
                 {
-                    let block_index = NodeBlock::index(ctx.from_node_id);
-                    let node_index = Node::index(ctx.from_node_id);
-                    let block = ctx
-                        .state_from
-                        .block(ctx.repository_from.clone(), block_index)
+                    ctx.state_from
+                        .node_clear_dirty(ctx.repository_from.clone(), ctx.from_node_id)
                         .await?;
-                    let dirtied = {
-                        let mut w = block.write();
-                        w.node(node_index).clear_dirty_flags();
-                        w.mark_dirty()
-                    };
-                    if dirtied {
-                        ctx.state_from.block_modified(block, block_index);
-                        ctx.state_from.mark_dirty();
-                    }
-
-                    // Parent cleanup: walk up and clear Dirty on parents with no dirty children
-                    let mut parent_id = ctx.from_node.unwrap().parent;
-                    while parent_id.is_valid_node_id() {
-                        if ctx
-                            .state_from
-                            .node_has_dirty_children(ctx.repository_from.clone(), parent_id)
-                            .await?
-                        {
-                            break;
-                        }
-                        let pb_idx = NodeBlock::index(parent_id);
-                        let pn_idx = Node::index(parent_id);
-                        let pb = ctx
-                            .state_from
-                            .block(ctx.repository_from.clone(), pb_idx)
-                            .await?;
-                        let pn = pb.node(pn_idx);
-                        let next = pn.parent;
-                        let dirtied = {
-                            let mut w = pb.write();
-                            w.node(pn_idx).clear_dirty_flags();
-                            w.mark_dirty()
-                        };
-                        if dirtied {
-                            ctx.state_from.block_modified(pb, pb_idx);
-                            ctx.state_from.mark_dirty();
-                        }
-                        if parent_id == ROOT_NODE {
-                            break;
-                        }
-                        parent_id = next;
-                    }
                 }
             }
         }

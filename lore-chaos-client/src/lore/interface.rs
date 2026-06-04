@@ -251,6 +251,7 @@ impl LoreInterface {
             LoreRepositoryStatusArgs {
                 staged: operation.staged as u8,
                 scan: operation.unstaged as u8,
+                check_dirty: 0,
                 reset: 0,
                 sync_point: operation.sync_point as u8,
                 revision_only: 0,

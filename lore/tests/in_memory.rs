@@ -102,6 +102,7 @@ mod tests {
         let args = LoreRepositoryStatusArgs {
             staged: 1,
             scan: 0,
+            check_dirty: 0,
             reset: 0,
             sync_point: 0,
             revision_only: 0,
@@ -201,6 +202,7 @@ mod tests {
         let args = LoreRepositoryStatusArgs {
             staged: 1,
             scan: 0,
+            check_dirty: 0,
             reset: 0,
             sync_point: 0,
             revision_only: 0,

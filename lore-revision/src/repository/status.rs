@@ -311,6 +311,19 @@ pub struct StatusOptions {
     /// persisted in the staged state so subsequent operations see an
     /// accurate picture without rescanning.
     pub scan: bool,
+    /// Verify dirty flags against the filesystem while reporting tracked state.
+    ///
+    /// Unlike [`scan`](Self::scan), this performs no filesystem walk: it only
+    /// re-examines files already marked dirty. For each dirty file the on-disk
+    /// content is checked (a size difference is a modification; otherwise, when
+    /// the recorded modification time differs, the content is rehashed and
+    /// compared). A file that turns out unmodified has its dirty flag cleared
+    /// and is dropped from the report, unless it is also staged. Structural
+    /// dirty actions (add/move/copy/delete) are always treated as modified.
+    ///
+    /// The refreshed flags are persisted in the staged state, so this requires
+    /// write capability.
+    pub check_dirty: bool,
     // Drop the existing staged anchor before computing status.
     // Combine with `scan` to scan from a clean slate.
     pub reset: bool,
@@ -355,6 +368,70 @@ async fn file_size_from_node_change_path(
         let size = metadata.size();
         Ok(size)
     }
+}
+
+/// Verify whether a dirty file change reflects a real on-disk modification,
+/// clearing the node's dirty flag when it does not.
+///
+/// Structural dirty actions (add/move/copy/delete) are modifications by
+/// definition and always report `true`. For a content modification the file is
+/// compared against its tracked node (the staged side of the diff, which
+/// carries the tracked content hash and size): a differing size is a modification;
+/// otherwise, when the recorded modification time differs, the content is
+/// rehashed and compared. A file that turns out unmodified has its dirty flag
+/// cleared on the staged node (propagating to parents) and reports `false`.
+///
+/// A missing or unreadable file is reported as modified — the dirty flag then
+/// reflects a real change that the regular diff will surface.
+async fn dirty_change_is_modified(
+    repository: Arc<RepositoryContext>,
+    change: &NodeChange,
+) -> Result<bool, StatusError> {
+    if change.action != FileAction::Keep {
+        return Ok(true);
+    }
+
+    let node_state = &change.to;
+    if !node_state.node.is_valid_node_id() {
+        return Ok(true);
+    }
+    let node = node_state
+        .get_node()
+        .await
+        .forward::<StatusError>("loading dirty node for verification")?;
+    if !node.is_file() {
+        return Ok(true);
+    }
+
+    let absolute_path = change.path.to_absolute_path(repository.require_path()?);
+    let Ok(metadata) = tokio::fs::metadata(&absolute_path).await else {
+        return Ok(true);
+    };
+    if !metadata.is_file() {
+        return Ok(true);
+    }
+
+    let (file_mtime, file_size) = crate::util::fs::file_mtime_and_size(&metadata);
+    let (is_modified, _file_hash) = state::is_file_modified(
+        repository.clone(),
+        &node,
+        file_mtime,
+        file_size,
+        &change.path,
+        false,
+    )
+    .await
+    .forward::<StatusError>("comparing dirty file against filesystem")?;
+
+    if !is_modified {
+        node_state
+            .state
+            .node_clear_dirty(node_state.repository.clone(), node_state.node)
+            .await
+            .forward::<StatusError>("clearing stale dirty flag")?;
+    }
+
+    Ok(is_modified)
 }
 
 /// Recursively count directories and files under `parent_node_id` in `state`,
@@ -574,6 +651,7 @@ pub async fn status(
 
     let show_staged = options.staged;
     let show_scan = options.scan;
+    let check_dirty = options.check_dirty;
 
     let local_latest = branch::load_latest(repository.clone(), branch.id)
         .await
@@ -865,16 +943,30 @@ pub async fn status(
                         // the filesystem and handles set/clear inline.
                         let dominated_by_scan =
                             show_scan && change.flags.is_dirty() && !change.flags.is_stage();
-                        if !dominated_by_scan
-                            && (change.flags.is_stage() || change.flags.is_dirty())
+                        if dominated_by_scan
+                            || !(change.flags.is_stage() || change.flags.is_dirty())
                         {
-                            let size = file_size_from_node_change_id(change).await?;
-
-                            event::LoreEvent::RepositoryStatusFile(
-                                LoreRepositoryStatusFileEventData::from_node_change(change, size),
-                            )
-                            .send();
+                            continue;
                         }
+
+                        let mut cleared_dirty = false;
+                        if check_dirty
+                            && change.flags.is_dirty()
+                            && !dirty_change_is_modified(repository.clone(), change).await?
+                        {
+                            if !change.flags.is_stage() {
+                                continue;
+                            }
+                            cleared_dirty = true;
+                        }
+
+                        let size = file_size_from_node_change_id(change).await?;
+                        let mut data =
+                            LoreRepositoryStatusFileEventData::from_node_change(change, size);
+                        if cleared_dirty {
+                            data.flag_dirty = 0;
+                        }
+                        event::LoreEvent::RepositoryStatusFile(data).send();
                     }
 
                     Ok(())

@@ -831,6 +831,15 @@ pub struct LoreRepositoryStatusArgs {
     /// staged state so subsequent operations (commit, stage, status) see an
     /// accurate picture without rescanning.
     pub scan: u8,
+    /// Verify dirty flags against the filesystem without a full scan.
+    ///
+    /// When `1`, files already marked dirty are re-examined individually: a
+    /// dirty file whose on-disk content matches its tracked node (same size,
+    /// and same content when the modification time differs) has its dirty flag
+    /// cleared and is omitted from the report, unless it is also staged.
+    /// Structural dirty actions (add/move/copy/delete) are always reported.
+    /// The refreshed flags are persisted in the staged state.
+    pub check_dirty: u8,
     /// Reset the current tracked state before computing current status
     pub reset: u8,
     /// Include sync point or not
@@ -899,10 +908,10 @@ async fn status_local(
     let mut globals = globals;
     globals.no_atime = 1;
 
-    if args.scan != 0 || args.reset != 0 {
-        // Scan persists dirty flags in the staged state and reset drops the
-        // staged anchor; both require write capability (same pattern as
-        // verify_state + heal).
+    if args.scan != 0 || args.check_dirty != 0 || args.reset != 0 {
+        // Scan and check_dirty persist refreshed dirty flags in the staged
+        // state and reset drops the staged anchor; all require write capability
+        // (same pattern as verify_state + heal).
         repository_call_write(
             globals,
             callback,
@@ -912,6 +921,7 @@ async fn status_local(
                 let options = StatusOptions {
                     staged: args.staged != 0,
                     scan: args.scan != 0,
+                    check_dirty: args.check_dirty != 0,
                     reset: args.reset != 0,
                     sync_point: args.sync_point != 0,
                     revision_only: args.revision_only != 0,
@@ -926,6 +936,7 @@ async fn status_local(
             let options = StatusOptions {
                 staged: args.staged != 0,
                 scan: false,
+                check_dirty: false,
                 reset: false,
                 sync_point: args.sync_point != 0,
                 revision_only: args.revision_only != 0,

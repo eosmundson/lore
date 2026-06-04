@@ -1682,6 +1682,7 @@ class Lore:
         path: str | list[str] | Path | list[Path] | None = None,
         unstaged: bool = False,
         scan: bool = False,
+        check_dirty: bool = False,
         reset: bool = False,
         revision_only: bool = False,
         count: bool = False,
@@ -1694,6 +1695,7 @@ class Lore:
             + path
             + (["--unstaged"] if unstaged else [])
             + (["--scan"] if scan else [])
+            + (["--check-dirty"] if check_dirty else [])
             + (["--reset"] if reset else [])
             + (["--revision-only"] if revision_only else [])
             + (["--count"] if count else [])

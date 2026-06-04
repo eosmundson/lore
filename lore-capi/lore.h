@@ -2742,6 +2742,15 @@ typedef struct lore_repository_status_args_t {
   // staged state so subsequent operations (commit, stage, status) see an
   // accurate picture without rescanning.
   uint8_t scan;
+  // Verify dirty flags against the filesystem without a full scan.
+  //
+  // When `1`, files already marked dirty are re-examined individually: a
+  // dirty file whose on-disk content matches its tracked node (same size,
+  // and same content when the modification time differs) has its dirty flag
+  // cleared and is omitted from the report, unless it is also staged.
+  // Structural dirty actions (add/move/copy/delete) are always reported.
+  // The refreshed flags are persisted in the staged state.
+  uint8_t check_dirty;
   // Reset the current tracked state before computing current status
   uint8_t reset;
   // Include sync point or not
