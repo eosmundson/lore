@@ -23,33 +23,45 @@ The binary and Docker paths are mutually exclusive, and each is complete on its 
 
     Download the release build for your platform:
 
-    === "macOS / Linux"
+    <!-- tabs:start -->
 
-        ```bash
-        curl -fsSL https://raw.githubusercontent.com/EpicGames/lore/main/scripts/install.sh | bash -s -- --server
-        ```
+    <!-- tab -->
+    **macOS / Linux**
 
-    === "Windows"
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/EpicGames/lore/main/scripts/install.sh | bash -s -- --server
+    ```
 
-        ```powershell
-        $env:LORE_SERVER=1; irm https://raw.githubusercontent.com/EpicGames/lore/main/scripts/install.ps1 | iex
-        ```
+    <!-- tab -->
+    **Windows**
+
+    ```powershell
+    $env:LORE_SERVER=1; irm https://raw.githubusercontent.com/EpicGames/lore/main/scripts/install.ps1 | iex
+    ```
+
+    <!-- tabs:end -->
 
 2. **Run it with default settings.**
 
     Start the server:
 
-    === "macOS / Linux"
+    <!-- tabs:start -->
 
-        ```bash
-        ~/.local/bin/loreserver
-        ```
+    <!-- tab -->
+    **macOS / Linux**
 
-    === "Windows"
+    ```bash
+    ~/.local/bin/loreserver
+    ```
 
-        ```powershell
-        & "$env:USERPROFILE\bin\loreserver.exe"
-        ```
+    <!-- tab -->
+    **Windows**
+
+    ```powershell
+    & "$env:USERPROFILE\bin\loreserver.exe"
+    ```
+
+    <!-- tabs:end -->
 
     > [!NOTE]
     > These are the default install locations. If you passed `--install-dir` / `-InstallDir` (or `LORE_INSTALL_DIR`) when running the install script, use that path instead.
@@ -64,91 +76,115 @@ The binary and Docker paths are mutually exclusive, and each is complete on its 
 
     Create the server directory layout:
 
-    === "macOS / Linux"
+    <!-- tabs:start -->
 
-        ```bash
-        mkdir -p /opt/loreserver/config /opt/loreserver/certs
-        ```
+    <!-- tab -->
+    **macOS / Linux**
 
-    === "Windows"
+    ```bash
+    mkdir -p /opt/loreserver/config /opt/loreserver/certs
+    ```
 
-        ```powershell
-        New-Item -ItemType Directory -Force C:\loreserver\config, C:\loreserver\certs
-        ```
+    <!-- tab -->
+    **Windows**
+
+    ```powershell
+    New-Item -ItemType Directory -Force C:\loreserver\config, C:\loreserver\certs
+    ```
+
+    <!-- tabs:end -->
 
     Generate a self-signed certificate valid for `localhost`:
 
-    === "macOS / Linux"
+    <!-- tabs:start -->
 
-        ```bash
-        openssl req -x509 -newkey rsa:2048 -nodes \
-          -keyout /opt/loreserver/certs/key.pem \
-          -out /opt/loreserver/certs/cert.pem \
-          -days 365 -subj "/CN=localhost" -addext "subjectAltName=IP:127.0.0.1,DNS:localhost"
-        ```
+    <!-- tab -->
+    **macOS / Linux**
 
-    === "Windows"
+    ```bash
+    openssl req -x509 -newkey rsa:2048 -nodes \
+      -keyout /opt/loreserver/certs/key.pem \
+      -out /opt/loreserver/certs/cert.pem \
+      -days 365 -subj "/CN=localhost" -addext "subjectAltName=IP:127.0.0.1,DNS:localhost"
+    ```
 
-        ```powershell
-        openssl req -x509 -newkey rsa:2048 -nodes `
-          -keyout C:\loreserver\certs\key.pem `
-          -out C:\loreserver\certs\cert.pem `
-          -days 365 -subj "/CN=localhost" -addext "subjectAltName=IP:127.0.0.1,DNS:localhost"
-        ```
+    <!-- tab -->
+    **Windows**
+
+    ```powershell
+    openssl req -x509 -newkey rsa:2048 -nodes `
+      -keyout C:\loreserver\certs\key.pem `
+      -out C:\loreserver\certs\cert.pem `
+      -days 365 -subj "/CN=localhost" -addext "subjectAltName=IP:127.0.0.1,DNS:localhost"
+    ```
+
+    <!-- tabs:end -->
 
     Create the config file:
 
-    === "macOS / Linux"
+    <!-- tabs:start -->
 
-        Create `/opt/loreserver/config/local.toml`:
+    <!-- tab -->
+    **macOS / Linux**
 
-        ```toml
-        [server.quic.certificate]
-        cert_file = "/opt/loreserver/certs/cert.pem"
-        pkey_file = "/opt/loreserver/certs/key.pem"
+    Create `/opt/loreserver/config/local.toml`:
 
-        [immutable_store.local]
-        path = "/opt/loreserver/store"
-        flush_delay_seconds = 10
+    ```toml
+    [server.quic.certificate]
+    cert_file = "/opt/loreserver/certs/cert.pem"
+    pkey_file = "/opt/loreserver/certs/key.pem"
 
-        [mutable_store.local]
-        path = "/opt/loreserver/store"
-        flush_delay_seconds = 10
-        ```
+    [immutable_store.local]
+    path = "/opt/loreserver/store"
+    flush_delay_seconds = 10
 
-    === "Windows"
+    [mutable_store.local]
+    path = "/opt/loreserver/store"
+    flush_delay_seconds = 10
+    ```
 
-        Create `C:\loreserver\config\local.toml`:
+    <!-- tab -->
+    **Windows**
 
-        ```toml
-        [server.quic.certificate]
-        cert_file = "C:\\loreserver\\certs\\cert.pem"
-        pkey_file = "C:\\loreserver\\certs\\key.pem"
+    Create `C:\loreserver\config\local.toml`:
 
-        [immutable_store.local]
-        path = "C:\\loreserver\\store"
-        flush_delay_seconds = 10
+    ```toml
+    [server.quic.certificate]
+    cert_file = "C:\\loreserver\\certs\\cert.pem"
+    pkey_file = "C:\\loreserver\\certs\\key.pem"
 
-        [mutable_store.local]
-        path = "C:\\loreserver\\store"
-        flush_delay_seconds = 10
-        ```
+    [immutable_store.local]
+    path = "C:\\loreserver\\store"
+    flush_delay_seconds = 10
+
+    [mutable_store.local]
+    path = "C:\\loreserver\\store"
+    flush_delay_seconds = 10
+    ```
+
+    <!-- tabs:end -->
 
     This is the minimal recommended config for a persistent Lore server: it targets a persistent path for both stores and replaces the ephemeral QUIC certificate with your own.
 
     With the config now defined, start the server and pass in the location of the config directory:
 
-    === "macOS / Linux"
+    <!-- tabs:start -->
 
-        ```bash
-        ~/.local/bin/loreserver --config /opt/loreserver/config
-        ```
+    <!-- tab -->
+    **macOS / Linux**
 
-    === "Windows"
+    ```bash
+    ~/.local/bin/loreserver --config /opt/loreserver/config
+    ```
 
-        ```powershell
-        "$env:USERPROFILE\bin\loreserver.exe" --config C:\loreserver\config
-        ```
+    <!-- tab -->
+    **Windows**
+
+    ```powershell
+    "$env:USERPROFILE\bin\loreserver.exe" --config C:\loreserver\config
+    ```
+
+    <!-- tabs:end -->
 
     > [!NOTE]
     > For the full set of loreserver configurables and the `local.toml` field reference, see the [Lore Server config reference](../reference/lore-server-config.md).
@@ -170,25 +206,31 @@ The binary and Docker paths are mutually exclusive, and each is complete on its 
 
     Map both the TCP and UDP sides of port `41337` and the HTTP port `41339`:
 
-    === "macOS / Linux"
+    <!-- tabs:start -->
 
-        ```bash
-        docker run -d --name lore-server \
-          -p 41337:41337/tcp \
-          -p 41337:41337/udp \
-          -p 41339:41339 \
-          lore-server
-        ```
+    <!-- tab -->
+    **macOS / Linux**
 
-    === "Windows"
+    ```bash
+    docker run -d --name lore-server \
+      -p 41337:41337/tcp \
+      -p 41337:41337/udp \
+      -p 41339:41339 \
+      lore-server
+    ```
 
-        ```powershell
-        docker run -d --name lore-server `
-          -p 41337:41337/tcp `
-          -p 41337:41337/udp `
-          -p 41339:41339 `
-          lore-server
-        ```
+    <!-- tab -->
+    **Windows**
+
+    ```powershell
+    docker run -d --name lore-server `
+      -p 41337:41337/tcp `
+      -p 41337:41337/udp `
+      -p 41339:41339 `
+      lore-server
+    ```
+
+    <!-- tabs:end -->
 
     The image stores data under `/data` inside the container and generates an ephemeral certificate, so it starts with no config of its own and runs with auth disabled. Like the binary's defaults, this is meant to be a throwaway instance: the certificate is ephemeral, and the container data is lost when the container is removed.
 
@@ -198,19 +240,25 @@ The binary and Docker paths are mutually exclusive, and each is complete on its 
 
     Generate a self-signed certificate valid for `localhost`:
 
-    === "macOS / Linux"
+    <!-- tabs:start -->
 
-        ```bash
-        openssl req -x509 -newkey rsa:2048 -nodes -keyout key.pem -out cert.pem -days 365 \
-          -subj "/CN=localhost" -addext "subjectAltName=IP:127.0.0.1,DNS:localhost"
-        ```
+    <!-- tab -->
+    **macOS / Linux**
 
-    === "Windows"
+    ```bash
+    openssl req -x509 -newkey rsa:2048 -nodes -keyout key.pem -out cert.pem -days 365 \
+      -subj "/CN=localhost" -addext "subjectAltName=IP:127.0.0.1,DNS:localhost"
+    ```
 
-        ```powershell
-        openssl req -x509 -newkey rsa:2048 -nodes -keyout key.pem -out cert.pem -days 365 `
-          -subj "/CN=localhost" -addext "subjectAltName=IP:127.0.0.1,DNS:localhost"
-        ```
+    <!-- tab -->
+    **Windows**
+
+    ```powershell
+    openssl req -x509 -newkey rsa:2048 -nodes -keyout key.pem -out cert.pem -days 365 `
+      -subj "/CN=localhost" -addext "subjectAltName=IP:127.0.0.1,DNS:localhost"
+    ```
+
+    <!-- tabs:end -->
 
     Create a `local.toml` that points the QUIC endpoint at it — the image already stores data under `/data`, so the certificate is the only loreserver config override you need:
 
@@ -222,35 +270,41 @@ The binary and Docker paths are mutually exclusive, and each is complete on its 
 
     Stop the throwaway container, then run again with the certificate, the overlay, and a host directory mounted for the data:
 
-    === "macOS / Linux"
+    <!-- tabs:start -->
 
-        ```bash
-        docker stop lore-server && docker rm lore-server
-        docker run -d --name lore-server \
-          -p 41337:41337/tcp \
-          -p 41337:41337/udp \
-          -p 41339:41339 \
-          -v "$PWD/cert.pem:/etc/lore/cert.pem:ro" \
-          -v "$PWD/key.pem:/etc/lore/key.pem:ro" \
-          -v "$PWD/local.toml:/etc/lore/config/local.toml:ro" \
-          -v ~/lore-data:/data \
-          lore-server
-        ```
+    <!-- tab -->
+    **macOS / Linux**
 
-    === "Windows"
+    ```bash
+    docker stop lore-server && docker rm lore-server
+    docker run -d --name lore-server \
+      -p 41337:41337/tcp \
+      -p 41337:41337/udp \
+      -p 41339:41339 \
+      -v "$PWD/cert.pem:/etc/lore/cert.pem:ro" \
+      -v "$PWD/key.pem:/etc/lore/key.pem:ro" \
+      -v "$PWD/local.toml:/etc/lore/config/local.toml:ro" \
+      -v ~/lore-data:/data \
+      lore-server
+    ```
 
-        ```powershell
-        docker stop lore-server; docker rm lore-server
-        docker run -d --name lore-server `
-          -p 41337:41337/tcp `
-          -p 41337:41337/udp `
-          -p 41339:41339 `
-          -v "${PWD}/cert.pem:/etc/lore/cert.pem:ro" `
-          -v "${PWD}/key.pem:/etc/lore/key.pem:ro" `
-          -v "${PWD}/local.toml:/etc/lore/config/local.toml:ro" `
-          -v "$env:USERPROFILE\lore-data:/data" `
-          lore-server
-        ```
+    <!-- tab -->
+    **Windows**
+
+    ```powershell
+    docker stop lore-server; docker rm lore-server
+    docker run -d --name lore-server `
+      -p 41337:41337/tcp `
+      -p 41337:41337/udp `
+      -p 41339:41339 `
+      -v "${PWD}/cert.pem:/etc/lore/cert.pem:ro" `
+      -v "${PWD}/key.pem:/etc/lore/key.pem:ro" `
+      -v "${PWD}/local.toml:/etc/lore/config/local.toml:ro" `
+      -v "$env:USERPROFILE\lore-data:/data" `
+      lore-server
+    ```
+
+    <!-- tabs:end -->
 
     Your data now persists in the mounted host directory and the certificate is stable across restarts. For everything else you can put in `local.toml`, see the [Lore Server config reference](../reference/lore-server-config.md).
 

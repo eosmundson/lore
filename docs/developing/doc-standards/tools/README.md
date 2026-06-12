@@ -67,6 +67,7 @@ Auto-discovers `.vale.ini` at the repo root. The `--glob` exclusion skips `*-tem
 | `Lore.PerforceIsmSubstitutions` | `changelist` → `revision`, `p4 integrate` → `lore branch merge`, `p4 sync` → `lore sync`, `p4 submit` → `lore commit`, `p4 revert` → `lore reset` | warning | [`language.md` § Lore vocabulary, not Git-isms](../canon/language.md#lore-vocabulary-not-git-isms) |
 | `Lore.PerforceIsmFlagged` | `depot`, `depot path`, `shelve`/`unshelve`, `p4 client`, `p4 stream` (no Lore analog) | warning | [`language.md` § Lore vocabulary, not Git-isms](../canon/language.md#lore-vocabulary-not-git-isms) |
 | `Lore.MkDocsAdmonitions` | `!!! note`, `!!! tip`, `!!! warning` (legacy MkDocs syntax) | error | [`format.md` § Callouts and admonitions](../canon/format.md#callouts-and-admonitions) |
+| `Lore.MkDocsTabs` | Raw pymdownx tab syntax (`=== "..."`, `/// tab \|`) instead of the comment-delimited tab convention | error | [`format.md` § Content tabs](../canon/format.md#content-tabs) |
 | `Lore.AlertTypes` | Non-GFM alert types: `> [!INFO]`, `> [!DANGER]` (the five GFM-native types — `NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION` — are all allowed) | warning | [`format.md` § Callouts and admonitions](../canon/format.md#callouts-and-admonitions) |
 | `Lore.ProductNaming` | `the Lore tool`, `the Lore CLI` | warning | [`language.md` § Lore product naming](../canon/language.md#lore-product-naming) |
 | `Lore.AmericanSpelling` | `cancelling`, `colour`, `defence`, `whilst`, `backwards`, `towards`, +14 others | warning | [`language.md`](../canon/language.md) |

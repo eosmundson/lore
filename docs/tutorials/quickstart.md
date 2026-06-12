@@ -16,17 +16,23 @@ Run Lore's install script in demo mode. It downloads the prebuilt `lore` CLI and
 
 <!-- TODO: EpicGames/lore raw URLs are a placeholder pending the public binary release; this documents the release-day happy path. -->
 
-=== "macOS / Linux"
+<!-- tabs:start -->
 
-    ```bash
-    curl -fsSL https://raw.githubusercontent.com/EpicGames/lore/main/scripts/install.sh | bash -s -- --demo
-    ```
+<!-- tab -->
+**macOS / Linux**
 
-=== "Windows"
+```bash
+curl -fsSL https://raw.githubusercontent.com/EpicGames/lore/main/scripts/install.sh | bash -s -- --demo
+```
 
-    ```powershell
-    $env:LORE_DEMO=1; irm https://raw.githubusercontent.com/EpicGames/lore/main/scripts/install.ps1 | iex
-    ```
+<!-- tab -->
+**Windows**
+
+```powershell
+$env:LORE_DEMO=1; irm https://raw.githubusercontent.com/EpicGames/lore/main/scripts/install.ps1 | iex
+```
+
+<!-- tabs:end -->
 
 The server keeps running in this terminal, listening on port 41337 for QUIC and gRPC and on port 41339 for HTTP. Open a new terminal for the rest of the tutorial, and leave this one alone — pressing Ctrl-C or closing it stops the server.
 

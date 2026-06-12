@@ -226,7 +226,7 @@ Lore docs render on two surfaces: GitHub (raw Markdown) and the published site t
 | Feature | Extension or theme flag | What it gives you |
 | --- | --- | --- |
 | GFM alert rendering | `gfm_admonition` | Converts `> [!NOTE]` / `> [!IMPORTANT]` / `> [!WARNING]` etc. to Material admonitions at parse time. Required for callouts to render as styled boxes on the published site. (`markdown-gfm-admonition` package.) |
-| Content tabs | `pymdownx.tabbed` | Side-by-side variants of the same content (for example, per-platform install steps). |
+| Content tabs | `pymdownx.tabbed` | Side-by-side variants of the same content (for example, per-platform install steps). Authored in the comment-delimited convention below; the `content_tabs.py` hook converts each group at build time. |
 | Collapsible blocks | `pymdownx.details` | `???` and `???+` collapsibles. |
 | Rich code fences | `pymdownx.superfences` | Nested fences inside lists, tabs, and admonitions. |
 | Code copy button | `content.code.copy` | Adds a copy icon to every code block. Free; no syntax change. |
@@ -240,32 +240,40 @@ Several of these have no GFM equivalent and won't render on GitHub. The copy but
 
 Ask: *would this doc be worse without it?* If the alternative is a long parallel subsection structure, a hard-to-scan list, or three near-duplicate procedures, a Material feature probably earns its keep. If the alternative is a single short list, plain Markdown wins.
 
-A counter-example is admonitions: GFM alerts render on both surfaces and are better than `!!! note`, so the rule there is closed — see the section above. Tabs are open because there is no GFM equivalent.
+A counter-example is admonitions: GFM alerts render on both surfaces and are better than `!!! note`, so the rule there is closed — see the section above. Tabs are now closed too: the comment-delimited convention below renders cleanly on both surfaces, so raw `=== "..."` syntax is banned in source. Vale `Lore.MkDocsTabs` enforces.
 
 ### Content tabs
 
 Use content tabs for parallel content that the reader will pick exactly one of: per-platform install steps, per-language code samples, per-audience walkthroughs. The reader picks one tab; the others stay hidden.
 
-`````markdown
-=== "macOS"
+Tabs are authored in a comment-delimited convention, never raw `=== "..."` syntax (Vale `Lore.MkDocsTabs` enforces). GitHub renders the comments as nothing and the titles as bold text, so the source stays readable on both surfaces; the `content_tabs.py` hook converts each group to Material tabs when the site builds.
 
-    1. **Download.**
+``````markdown
+<!-- tabs:start -->
 
-        ```bash
-        curl -Lo lore https://example.com/lore-macos
-        ```
+<!-- tab -->
+**macOS**
 
-=== "Linux"
+```bash
+curl -Lo lore https://example.com/lore-macos
+```
 
-    1. **Download.**
+<!-- tab -->
+**Linux**
 
-        ```bash
-        curl -Lo lore https://example.com/lore-linux
-        ```
-`````
+```bash
+curl -Lo lore https://example.com/lore-linux
+```
 
-> [!IMPORTANT]
-> Content inside a tab must be indented by **four spaces**, not two. This is the most common authoring mistake — the page renders, but the nested list or code fence falls outside the tab with no error. If a code block inside a tab is itself fenced, indent the entire fence by four spaces as well.
+<!-- tabs:end -->
+``````
+
+The hook checks every group at build time — a malformed group is left unconverted and fails `mkdocs build --strict`:
+
+- `<!-- tabs:start -->`, `<!-- tab -->`, and `<!-- tabs:end -->` each sit on their own line, all at the same indentation (inside a list step, the list's content indentation).
+- Each `<!-- tab -->` is followed by the tab's title: a line that is only bold text, like `**macOS**`. Titles can't contain double quotes or asterisks.
+- A bold-only line without a preceding `<!-- tab -->` is ordinary content — it never starts a tab.
+- A group holds two or more tabs. Content is written at its natural indentation — no extra four-space indentation, and code fences stay ordinary fences.
 
 Don't hide load-bearing instructions inside tabs. A reader who needs all platforms (for example, setting up CI on Linux after developing on macOS) shouldn't have to click through every tab to discover what's identical and what differs — if more than half the steps repeat across tabs, pull the shared steps out and tab only the divergent parts.
 

@@ -1,0 +1,12 @@
+# Lore docs author content tabs in the comment-delimited convention
+# (<!-- tabs:start -->), not raw pymdownx tab syntax. Regression check.
+# Documented in: docs/developing/doc-standards/canon/format.md#content-tabs
+
+extends: existence
+message: "Raw tab syntax '%s' is not allowed. Use the comment-delimited tab convention: <!-- tabs:start -->, <!-- tab -->, <!-- tabs:end -->."
+link: docs/developing/doc-standards/canon/format.md#content-tabs
+level: error
+nonword: true
+tokens:
+  - '^\s*=== "'
+  - '^\s*/// tab \|'

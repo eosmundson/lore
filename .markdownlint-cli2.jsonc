@@ -23,10 +23,17 @@
     // body H1s count toward the "single H1" rule.
     "MD025": { "front_matter_title": "" },
 
-    // MD046 fires false positives on fenced code blocks inside Material tab
-    // content: the indented tab delimiters look like the first code-block style
-    // seen, so all subsequent fenced blocks in the file are flagged. Fenced
-    // with a language tag is the required style per format.md.
+    // Bold-only lines are the tab-title syntax of the comment-delimited
+    // content-tab convention (see
+    // docs/developing/doc-standards/canon/format.md#content-tabs); MD036
+    // would flag every top-level tab title as emphasis-used-instead-of-heading.
+    "MD036": false,
+
+    // MD046 fires false positives on fenced code blocks inside list steps:
+    // the blocks appear at 4-space (list-content) indentation, which
+    // markdownlint reads as the indented-code-block style, so it flags all
+    // subsequent fenced blocks in the file as inconsistent. Fenced with a
+    // language tag is the required style per format.md.
     "MD046": false
   },
   "globs": [

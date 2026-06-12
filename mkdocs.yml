@@ -72,8 +72,11 @@ not_in_nav: |
 
 # Site-layer presentation for ADRs: render the frontmatter (status, date,
 # deciders, …) as a table under each H1. Source ADR files are left untouched.
+# Comment-delimited tab groups (<!-- tabs:start/end -->) → Material content
+# tabs; convention documented in docs/developing/doc-standards/canon/format.md.
 hooks:
   - docs/assets/hooks/adr_meta.py
+  - docs/assets/hooks/content_tabs.py
 
 markdown_extensions:
   - gfm_admonition

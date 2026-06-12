@@ -23,17 +23,23 @@ Pick this path for a normal install from a published release.
 
 1. **Run the installer.**
 
-    === "macOS / Linux"
+    <!-- tabs:start -->
 
-        ```bash
-        curl -fsSL https://raw.githubusercontent.com/EpicGames/lore/main/scripts/install.sh | bash
-        ```
+    <!-- tab -->
+    **macOS / Linux**
 
-    === "Windows"
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/EpicGames/lore/main/scripts/install.sh | bash
+    ```
 
-        ```powershell
-        irm https://raw.githubusercontent.com/EpicGames/lore/main/scripts/install.ps1 | iex
-        ```
+    <!-- tab -->
+    **Windows**
+
+    ```powershell
+    irm https://raw.githubusercontent.com/EpicGames/lore/main/scripts/install.ps1 | iex
+    ```
+
+    <!-- tabs:end -->
 
     The installer downloads the binary for your platform and adds it to your PATH. Open a new terminal session for the PATH change to take effect.
 
@@ -55,83 +61,96 @@ Pick this path to run a CLI built from your own checkout.
 
     Move the compiled binary into a directory on your PATH so you can run `lore` from any directory.
 
-    === "macOS / Linux"
+    <!-- tabs:start -->
 
-        Using `/usr/local/bin` (no PATH changes needed):
+    <!-- tab -->
+    **macOS / Linux**
 
-        ```bash
-        sudo cp target/release/lore /usr/local/bin/lore
-        ```
+    Using `/usr/local/bin` (no PATH changes needed):
 
-        Using `~/bin` instead (no `sudo` required):
+    ```bash
+    sudo cp target/release/lore /usr/local/bin/lore
+    ```
 
-        ```bash
-        mkdir -p ~/bin
-        cp target/release/lore ~/bin/lore
-        ```
+    Using `~/bin` instead (no `sudo` required):
 
-        If you used `~/bin`, add it to your PATH. For zsh (the default on macOS):
+    ```bash
+    mkdir -p ~/bin
+    cp target/release/lore ~/bin/lore
+    ```
 
-        ```bash
-        echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
-        source ~/.zshrc
-        ```
+    If you used `~/bin`, add it to your PATH. For zsh (the default on macOS):
 
-        For bash:
+    ```bash
+    echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc
+    source ~/.zshrc
+    ```
 
-        ```bash
-        echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
-        source ~/.bashrc
-        ```
+    For bash:
 
-    === "Windows (PowerShell)"
+    ```bash
+    echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
+    source ~/.bashrc
+    ```
 
-        Copy the executable into a directory you control, for example `%USERPROFILE%\bin`:
+    <!-- tab -->
+    **Windows (PowerShell)**
 
-        ```powershell
-        New-Item -ItemType Directory -Force "$env:USERPROFILE\bin"
-        Copy-Item target\release\lore.exe "$env:USERPROFILE\bin\lore.exe"
-        ```
+    Copy the executable into a directory you control, for example `%USERPROFILE%\bin`:
 
-        Add that directory to your PATH:
+    ```powershell
+    New-Item -ItemType Directory -Force "$env:USERPROFILE\bin"
+    Copy-Item target\release\lore.exe "$env:USERPROFILE\bin\lore.exe"
+    ```
 
-        ```powershell
-        [Environment]::SetEnvironmentVariable(
-          "Path",
-          [Environment]::GetEnvironmentVariable("Path", "User") + ";$env:USERPROFILE\bin",
-          "User"
-        )
-        ```
+    Add that directory to your PATH:
 
-        Open a new terminal afterward. An existing terminal won't reflect the PATH change.
+    ```powershell
+    [Environment]::SetEnvironmentVariable(
+      "Path",
+      [Environment]::GetEnvironmentVariable("Path", "User") + ";$env:USERPROFILE\bin",
+      "User"
+    )
+    ```
+
+    Open a new terminal afterward. An existing terminal won't reflect the PATH change.
+
+    <!-- tabs:end -->
 
 ## Install shell completions (optional)
 
 The `lore completions` command generates and installs shell completions for `lore`. Once installed, pressing Tab completes commands or lists possible matches when the input is ambiguous. To run it, pass the shell name and an optional output directory; omit the directory to print the script to standard output instead. Lore also supports `fish` and `elvish` through the same command.
 
-=== "zsh"
+<!-- tabs:start -->
 
-    ```bash
-    lore completions zsh ~/.zsh/completions
-    ```
+<!-- tab -->
+**zsh**
 
-    Make sure the target directory is on your `fpath`, then restart your shell.
+```bash
+lore completions zsh ~/.zsh/completions
+```
 
-=== "bash"
+Make sure the target directory is on your `fpath`, then restart your shell.
 
-    ```bash
-    lore completions bash > ~/.local/share/bash-completion/completions/lore
-    ```
+<!-- tab -->
+**bash**
 
-    Restart your shell to load the completions.
+```bash
+lore completions bash > ~/.local/share/bash-completion/completions/lore
+```
 
-=== "PowerShell"
+Restart your shell to load the completions.
 
-    ```powershell
-    lore completions powershell | Out-String | Invoke-Expression
-    ```
+<!-- tab -->
+**PowerShell**
 
-    To make completions persistent, add that line to your PowerShell profile.
+```powershell
+lore completions powershell | Out-String | Invoke-Expression
+```
+
+To make completions persistent, add that line to your PowerShell profile.
+
+<!-- tabs:end -->
 
 ## Result
 
