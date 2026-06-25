@@ -93,9 +93,9 @@ fn emit_node_info_error(id: u64, error_code: LoreErrorCode) {
 ///
 /// Node ids are opaque values issued by the API. An id the API never issued
 /// that happens to land on an unallocated slot of an existing block reads back
-/// as a zeroed directory record rather than `INVALID_ARGUMENTS`; only the
-/// reserved invalid sentinel and ids resolving to a non-existent block are
-/// rejected.
+/// as a zeroed record with an empty name; since every non-root node has a
+/// non-empty name, such an id is rejected with `INVALID_ARGUMENTS` rather than
+/// reported as a bogus record (consistent with `node_path`).
 pub async fn node_info(
     globals: LoreGlobalArgs,
     args: LoreRevisionTreeNodeInfoArgs,
@@ -156,6 +156,13 @@ async fn node_info_impl(
                     }
                 }
             };
+
+            // Every non-root node has a non-empty name, so an empty name means the
+            // id landed on an unallocated slot rather than a real node.
+            if node_id != ROOT_NODE && name.is_empty() {
+                emit_node_info_error(id, LoreErrorCode::InvalidArguments);
+                return Err(invalid("node id does not resolve to a named node"));
+            }
 
             let kind = if node.is_file() {
                 LoreNodeType::File as u32
@@ -534,6 +541,40 @@ mod tests {
             data.error_code,
             LoreErrorCode::InvalidArguments,
             "an unreadable node id must report InvalidArguments, got {events:?}"
+        );
+        assert!(events.contains(&CapturedEvent::Complete(1)));
+
+        release(handle, store_handle_id);
+    }
+
+    #[tokio::test]
+    async fn node_info_unallocated_node_returns_invalid_arguments() {
+        let (handle, store_handle_id) =
+            load_handle("ni-unallocated", Partition::from([0x88u8; 16])).await;
+
+        // No nodes added: id 1 is an in-range but unallocated slot, which reads
+        // back as a zeroed record with an empty name.
+        let sink: Arc<Mutex<Vec<CapturedEvent>>> = Arc::new(Mutex::new(Vec::new()));
+        let status = node_info(
+            LoreGlobalArgs::default(),
+            LoreRevisionTreeNodeInfoArgs {
+                id: 6,
+                handle,
+                node_id: 1,
+            },
+            make_callback(sink.clone()),
+        )
+        .await;
+
+        assert_eq!(status, 1, "an unallocated node id must fail");
+        let events = sink.lock().unwrap().clone();
+        let data = node_info_event(&events)
+            .expect("a failure must still emit the node info terminal carrying the id");
+        assert_eq!(data.id, 6);
+        assert_eq!(
+            data.error_code,
+            LoreErrorCode::InvalidArguments,
+            "a non-root node with an empty name must report InvalidArguments, got {events:?}"
         );
         assert!(events.contains(&CapturedEvent::Complete(1)));
 

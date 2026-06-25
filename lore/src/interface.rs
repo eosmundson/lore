@@ -7406,3 +7406,41 @@ pub extern "C" fn lore_revision_tree_info_async(
 ) {
     run_asynchronously(globals, args, callback, crate::revision_tree::info::info);
 }
+
+pub type LoreRevisionTreeNodePathArgs =
+    crate::revision_tree::node_path::LoreRevisionTreeNodePathArgs;
+
+/// Reconstruct the full UTF-8 path for a node id by walking parent pointers,
+/// relative to the handle's own tree root.
+///
+/// | Terminal event                       | Payload                                     | Notes                                                  |
+/// |--------------------------------------|---------------------------------------------|--------------------------------------------------------|
+/// | `LORE_EVENT_REVISION_TREE_NODE_PATH` | `lore_revision_tree_node_path_event_data_t` | Carries the path; the root resolves to the empty path  |
+#[unsafe(no_mangle)]
+pub extern "C" fn lore_revision_tree_node_path(
+    globals: &LoreGlobalArgs,
+    args: &LoreRevisionTreeNodePathArgs,
+    callback: LoreEventCallbackConfig,
+) -> i32 {
+    run_synchronously(
+        globals,
+        args,
+        callback,
+        crate::revision_tree::node_path::node_path,
+    )
+}
+
+/// Reconstruct the full UTF-8 path for a node id (async variant).
+#[unsafe(no_mangle)]
+pub extern "C" fn lore_revision_tree_node_path_async(
+    globals: &LoreGlobalArgs,
+    args: &LoreRevisionTreeNodePathArgs,
+    callback: LoreEventCallbackConfig,
+) {
+    run_asynchronously(
+        globals,
+        args,
+        callback,
+        crate::revision_tree::node_path::node_path,
+    );
+}

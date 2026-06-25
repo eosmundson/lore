@@ -2598,12 +2598,18 @@ typedef struct lore_revision_tree_node_info_event_data_t {
   enum lore_error_code_t error_code;
 } lore_revision_tree_node_info_event_data_t;
 
-// Terminal per-call event for `node_path`. On success `path` is the
-// reconstructed UTF-8 path from the root to the queried node; on failure
-// `path` is empty and `error_code` is populated.
+// Terminal per-call event for `node_path`. On success `error_code == None` and
+// `path` is the reconstructed UTF-8 path from the root to the queried node,
+// with `repository`/`revision` identifying the tree it was reconstructed in
+// (the handle's own — `node_path` walks within the handle's revision and does
+// not follow links). On failure `path` is empty and `error_code` is populated.
 typedef struct lore_revision_tree_node_path_event_data_t {
   // Correlation id of the originating call.
   uint64_t id;
+  // Repository the path was reconstructed in.
+  lore_repository_id_t repository;
+  // Revision the path was reconstructed in.
+  struct lore_hash_t revision;
   // The reconstructed path from the root to the queried node.
   struct lore_string_t path;
   // The outcome of the call.
@@ -10786,3 +10792,18 @@ int32_t lore_revision_tree_info(const struct lore_global_args_t *globals,
 void lore_revision_tree_info_async(const struct lore_global_args_t *globals,
                                    const struct lore_revision_tree_info_args_t *args,
                                    struct lore_event_callback_config_t callback);
+
+// Reconstruct the full UTF-8 path for a node id by walking parent pointers,
+// relative to the handle's own tree root.
+//
+// | Terminal event                       | Payload                                     | Notes                                                  |
+// |--------------------------------------|---------------------------------------------|--------------------------------------------------------|
+// | `LORE_EVENT_REVISION_TREE_NODE_PATH` | `lore_revision_tree_node_path_event_data_t` | Carries the path; the root resolves to the empty path  |
+int32_t lore_revision_tree_node_path(const struct lore_global_args_t *globals,
+                                     const struct lore_revision_tree_node_path_args_t *args,
+                                     struct lore_event_callback_config_t callback);
+
+// Reconstruct the full UTF-8 path for a node id (async variant).
+void lore_revision_tree_node_path_async(const struct lore_global_args_t *globals,
+                                        const struct lore_revision_tree_node_path_args_t *args,
+                                        struct lore_event_callback_config_t callback);

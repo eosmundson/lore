@@ -149,4 +149,5 @@ pub enum LoreCommand {
     RevisionTreeListChildren(crate::revision_tree::list_children::LoreRevisionTreeListChildrenArgs),
     RevisionTreeNodeInfo(crate::revision_tree::node_info::LoreRevisionTreeNodeInfoArgs),
     RevisionTreeInfo(crate::revision_tree::info::LoreRevisionTreeInfoArgs),
+    RevisionTreeNodePath(crate::revision_tree::node_path::LoreRevisionTreeNodePathArgs),
 }

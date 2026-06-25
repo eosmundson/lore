@@ -145,15 +145,21 @@ pub struct LoreRevisionTreeNodeInfoEventData {
     pub error_code: LoreErrorCode,
 }
 
-/// Terminal per-call event for `node_path`. On success `path` is the
-/// reconstructed UTF-8 path from the root to the queried node; on failure
-/// `path` is empty and `error_code` is populated.
+/// Terminal per-call event for `node_path`. On success `error_code == None` and
+/// `path` is the reconstructed UTF-8 path from the root to the queried node,
+/// with `repository`/`revision` identifying the tree it was reconstructed in
+/// (the handle's own — `node_path` walks within the handle's revision and does
+/// not follow links). On failure `path` is empty and `error_code` is populated.
 #[repr(C)]
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoreRevisionTreeNodePathEventData {
     /// Correlation id of the originating call.
     pub id: u64,
+    /// Repository the path was reconstructed in.
+    pub repository: RepositoryId,
+    /// Revision the path was reconstructed in.
+    pub revision: Hash,
     /// The reconstructed path from the root to the queried node.
     pub path: LoreString,
     /// The outcome of the call.

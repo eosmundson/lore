@@ -104,7 +104,7 @@ Every read operation has sync and async variants. Results are delivered as one o
 
 - `lore_revision_tree_info(handle)` — single event carrying the loaded revision's record-level metadata: parent revision signatures, creation timestamp, author identity, metadata key count. Revision-scoped — takes no node id.
 
-- `lore_revision_tree_node_path(handle, node_id)` — helper that walks parent pointers and assembles the full UTF-8 path string. Used for logging, display, or other cases where the caller actually needs the path; not used in hot loops.
+- `lore_revision_tree_node_path(handle, node_id)` — helper that walks parent pointers and assembles the full UTF-8 path string. Used for logging, display, or other cases where the caller actually needs the path; not used in hot loops. The path is relative to the **handle's own tree root** — `node_path` interprets `node_id` in the handle's `(repository, revision)` and does not follow links (mirroring `node_info`). For a node obtained by resolving *through* a link (scoped to a target `(repository, revision)`), the caller reopens a handle at that target — which `resolve_path` / `list_children` hand back — and calls `node_path` there to get the raw target-relative path. (A separate future entry point may take an explicit `(node_id, repository, revision)` and reconstruct the path in that passed-in tree without reopening a handle; out of scope here.)
 
 Node ids are opaque to the caller. The handle guarantees a node id remains valid for the handle's lifetime; the contract after `lore_revision_tree_commit` is an open question (see Unresolved Questions).
 
